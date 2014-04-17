@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -Wall -Werror -std=c++11
+CFLAGS = -std=c++11
 
 OBJS = main.o
 
@@ -9,4 +9,4 @@ main.o: main.cpp
 	$(CC) $(CFLAGS) -c main.cpp
 .PHONY: clean
 clean:
-	rm -rm $(OBJS) lab11
+	rm -rf $(OBJS) lab11
