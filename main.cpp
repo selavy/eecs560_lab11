@@ -21,7 +21,7 @@ void kruskal( int ** graph, int n );
 
 int main( int argc, char **argv ) {
   if( argc < 2 ) {
-    cerr << "Usage: " << argv[1] << " [FILE]" << endl;
+    cerr << "Usage: " << argv[0] << " [FILE]" << endl;
     exit( 0 );
   }
 
