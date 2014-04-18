@@ -25,63 +25,112 @@ int main( int argc, char **argv ) {
     exit( 0 );
   }
 
-  ifstream ifs( argv[1], ifstream::in );
-  if(! ifs.good() ) {
-    cerr << "Unable to open input file: " << argv[1] << endl;
+  ifstream ifs;
+  try {
+    ifs.open( argv[1], ifstream::in );
+    if(! ifs.good() ) {
+      cerr << "Unable to open input file: " << argv[1] << endl;
+      exit( 0 );
+    }
+  } catch( ... ) {
+    cerr << "Error in opening input file: " << argv[1] << endl;
     exit( 0 );
   }
 
   string line;
   vector<int> first_row;
-  getline( ifs, line );
-  
-  size_t prev = 0;
-  size_t pos = line.find_first_of(SPACE);
-  while( pos != string::npos ) {
-    int val = stoi( line.substr( prev, pos ) );
-    first_row.push_back( val );
-    prev = pos;
-    pos = line.find_first_of( SPACE, pos+1 );
+
+  try {
+    getline( ifs, line );
+  } catch( ... ) {
+    cerr << "Error: malformed input file: " << argv[1] << endl;
+    exit( 0 );
   }
-  int val = stoi( line.substr( prev, line.size() ) );
-  first_row.push_back( val );
   
-  int n = first_row.size();
+  int n;
+  try {
+    size_t prev = 0;
+    size_t pos = line.find_first_of(SPACE);
+    while( pos != string::npos ) {
+      int val = stoi( line.substr( prev, pos ) );
+      first_row.push_back( val );
+      prev = pos;
+      pos = line.find_first_of( SPACE, pos+1 );
+    }
+    int val = stoi( line.substr( prev, line.size() ) );
+    first_row.push_back( val );
+    
+    n = first_row.size();
+  } catch( ... ) {
+    cerr << "Error: unable to determine the dimensions of cost matrix." << endl;
+    exit( 0 );
+  }
 
   //
   // Allocate 2-d matrix array
   //
-  int ** matrix = new int*[n];
-  int ** matrix2 = new int*[n];
-  for( int i = 0; i < n; ++i ) {
-    matrix[i] = new int[n];
-    matrix2[i] = new int[n];
-  }
-
-  for( int i = 0; i < n; ++i ) {
-    matrix[i][0] = first_row.at( i );
-    matrix2[i][0] = matrix[i][0];
-  }
-
-  for( int i = 1; i < n; ++i ) {
-    for( int j = 0; j < n; ++j ) {
-      ifs >> line;
-      int val = stoi( line );
-      matrix[j][i] = val;
-      matrix2[j][i] = val;
+  int ** matrix = NULL;
+  int ** matrix2 = NULL;
+  try {
+    matrix = new int*[n];
+    matrix2 = new int*[n];
+    for( int i = 0; i < n; ++i ) {
+      matrix[i] = new int[n];
+      matrix2[i] = new int[n];
     }
+  } catch( ... ) {
+    cerr << "Error: not enough memory available" << endl;
+    //
+    // Don't worry about de-allocating memory because OS will
+    // reclaim it anyways
+    //
+    exit( 0 );
   }
 
-  cout << "Cost Matrix for the graph: " << endl;
-  print_graph( matrix, n );
+  try {
+    for( int i = 0; i < n; ++i ) {
+      matrix[i][0] = first_row.at( i );
+      matrix2[i][0] = matrix[i][0];
+    }
+    
+    for( int i = 1; i < n; ++i ) {
+      for( int j = 0; j < n; ++j ) {
+	ifs >> line;
+	int val = stoi( line );
+	matrix[j][i] = val;
+	matrix2[j][i] = val;
+      }
+    }
+  } catch( ... ) {
+    cerr << "Error: unrecoverable" << endl;
+    goto error;
+  }
+    
+  try {
+    cout << "Cost Matrix: " << endl;
+    print_graph( matrix, n );
+  } catch( ... ) {
+    cerr << "Error: print_graph()" << endl;
+    goto error;
+  }
+    
+  try {
+    cout << "\nRunning breaking cycles algorithm...\n" << endl;
+    breaking_cycles( matrix, n );
+  } catch( ... ) {
+    cerr << "Error: breaking-cycles algorithm" << endl;
+    goto error;
+  }
+    
+  try {
+    cout << "\nRunning kruskal's algorithm...\n" << endl;
+    kruskal( matrix2, n );
+  } catch( ... ) {
+    cerr << "Error: kruskal's algorithm" << endl;
+    goto error;
+  }
 
-  cout << "\nRunning breaking cycles algorithm...\n" << endl;
-  breaking_cycles( matrix, n );
-  
-
-  cout << "\nRunning kruskal's algorithm...\n" << endl;
-  kruskal( matrix2, n );
-
+ error:
   //
   // Delete 2-d matrix array
   //
