@@ -4,6 +4,9 @@
 #include <fstream>
 #include <vector>
 #include <queue>
+#include <queue>
+
+#include "DisjointSet.hpp"
 
 #define SPACE ' '
 
@@ -14,6 +17,7 @@ typedef int vertice;
 void breaking_cycles( int ** graph, int n );
 bool depth_first_search( int curr, int from, int**& graph, bool*& visited, int& highest, int*& edge, int n );
 void print_graph( int ** graph, int n );
+void kruskal( int ** graph, int n );
 
 int main( int argc, char **argv ) {
   if( argc < 2 ) {
@@ -48,12 +52,15 @@ int main( int argc, char **argv ) {
   // Allocate 2-d matrix array
   //
   int ** matrix = new int*[n];
+  int ** matrix2 = new int*[n];
   for( int i = 0; i < n; ++i ) {
     matrix[i] = new int[n];
+    matrix2[i] = new int[n];
   }
 
   for( int i = 0; i < n; ++i ) {
     matrix[i][0] = first_row.at( i );
+    matrix2[i][0] = matrix[i][0];
   }
 
   for( int i = 1; i < n; ++i ) {
@@ -61,29 +68,106 @@ int main( int argc, char **argv ) {
       ifs >> line;
       int val = stoi( line );
       matrix[j][i] = val;
+      matrix2[j][i] = val;
     }
   }
 
-  for( int i = 0; i < n; ++i ) {
-    for( int j = 0; j < n; ++j ) {
-      cout << matrix[j][i] << " ";
-    }
-    cout << endl;
-  }
+  cout << "Cost Matrix for the graph: " << endl;
+  print_graph( matrix, n );
 
   cout << "\nRunning breaking cycles algorithm...\n" << endl;
   breaking_cycles( matrix, n );
   
+
+  cout << "\nRunning kruskal's algorithm...\n" << endl;
+  kruskal( matrix2, n );
+
   //
   // Delete 2-d matrix array
   //
   for( int i = 0; i < n; ++i ) {
     delete [] matrix[i];
+    delete [] matrix2[i];
   }
   delete matrix;
+  delete matrix2;
   
   ifs.close();
   return 0;
+}
+
+struct Edge {
+  int to;
+  int from;
+  int weight;
+
+  Edge( int a, int b, int c ) : to( a ), from( b ), weight( c ) {}
+};
+
+struct CompareEdges {
+  bool operator()( const Edge& a, const Edge& b ) const {
+    return a.weight > b.weight;
+  }
+};
+
+void kruskal( int ** graph, int n ) {
+  DisjointSet djset( n );
+  priority_queue<Edge, vector<Edge>, CompareEdges> heap;
+
+  int ** new_graph = new int*[n];
+  for( int i = 0; i < n; ++i ) {
+    new_graph[i] = new int[n];
+  }
+
+  for( int i = 0; i < n; ++i ) {
+    for( int j = 0; j < n; ++j ) {
+      new_graph[i][j] = 0;
+    }
+  }
+
+  //
+  // Add all edges to heap
+  //
+  for( int i = 0; i < n; ++i ) {
+    for( int j = (i+1); j < n; ++j ) {
+      if( graph[i][j] > 0 ) {
+	heap.emplace( i, j, graph[i][j] );
+      }
+    }
+  }
+
+  int edgesAccepted = 0;
+  const int edgesNeeded = n - 1;
+  
+  while(( !heap.empty() ) && ( edgesAccepted < edgesNeeded ) ) {
+    Edge edge = heap.top();
+    heap.pop();
+    const int uSet = djset.Find( edge.to );
+    const int vSet = djset.Find( edge.from );
+    if( uSet != vSet ) {
+      djset.Union( uSet, vSet );
+      new_graph[edge.to][edge.from] = graph[edge.to][edge.from];
+      new_graph[edge.from][edge.to] = graph[edge.from][edge.to];
+      ++edgesAccepted;
+    }
+
+  }
+
+  int totalWeight = 0;
+  for( int i = 0; i < n; ++i ) {
+    for( int j = (i+1); j < n; ++j ) {
+      if( new_graph[i][j] > 0 ) {
+	cout << "(" << i + 1 << ", " << j + 1 << ")" << endl;
+	totalWeight += new_graph[i][j];
+      }
+    }
+  }
+  cout << "Total Weight = " << totalWeight << endl;
+
+  for( int i = 0; i < n; ++i ) {
+    delete [] new_graph[i];
+  }
+  delete [] new_graph;
 }
 
 void breaking_cycles( int ** graph, int n ) {
@@ -105,13 +189,16 @@ void breaking_cycles( int ** graph, int n ) {
   delete [] edge;
   delete [] visited;
 
-  for( int i = 0; i <= (n/2); ++i ) {
-    for( int j = i; j < n; ++j ) {
-      if( graph[j][i] > 0 ) {
+  int totalWeight = 0;
+  for( int i = 0; i < n; ++i ) {
+    for( int j = (i+1); j < n; ++j ) {
+      if( graph[i][j] > 0 ) {
 	cout << "(" << i + 1 << ", " << j + 1 << ")" << endl;
+	totalWeight += graph[i][j];
       }
     }
   }
+  cout << "Total Weight = " << totalWeight << endl;
 }
 
 void print_graph( int ** graph, int n ) {
@@ -137,7 +224,7 @@ bool depth_first_search( int curr, int from, int**& graph, bool*& visited, int& 
   visited[curr] = true;
   bool retVal = false;
 
-  for( int i = 0; i < n; ++i ) {
+  for( int i = 0; (i < n) && (retVal == false); ++i ) {
     if( i == from ) {
       continue;
     } else if( graph[i][curr] > 0 ) {
