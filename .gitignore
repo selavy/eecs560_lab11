@@ -5,6 +5,9 @@
 *.obj
 lab11
 
+# ctags
+tags
+
 # Compiled Dynamic libraries
 *.so
 *.dylib

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <vector>
 #include <queue>
@@ -11,6 +12,8 @@ using namespace std;
 typedef int vertice;
 
 void breaking_cycles( int ** graph, int n );
+bool depth_first_search( int curr, int from, int**& graph, bool*& visited, int& highest, int*& edge, int n );
+void print_graph( int ** graph, int n );
 
 int main( int argc, char **argv ) {
   if( argc < 2 ) {
@@ -68,7 +71,7 @@ int main( int argc, char **argv ) {
     cout << endl;
   }
 
-  cout << "Running breaking cycles algorithm...\n" << endl;
+  cout << "\nRunning breaking cycles algorithm...\n" << endl;
   breaking_cycles( matrix, n );
   
   //
@@ -84,66 +87,72 @@ int main( int argc, char **argv ) {
 }
 
 void breaking_cycles( int ** graph, int n ) {
-  queue<vertice> Q;
-  int highest_weight = 0;
-  vertice edge[2];
-  int * visited = new int[n];
-  for( int i = 0; i < n; ++i ) {
-      visited[i] = false;
+  bool * visited = new bool[n];
+  memset( visited, 0, sizeof( bool ) * n );
+
+
+  int * edge = new int[2];
+  edge[0] = 0; edge[1] = 0;
+  int highest = -1;
+  while( depth_first_search( 0, 0, graph, visited, highest, edge, n ) ) {
+    graph[edge[0]][edge[1]] = 0;
+    graph[edge[1]][edge[0]] = 0;
+    edge[0] = 0; edge[1] = 0; 
+    highest = -1;
+    memset( visited, 0, sizeof( bool ) * n );
   }
 
-  int from = 0;
-  const int start = 0;
-  Q.push( start );
+  delete [] edge;
+  delete [] visited;
 
-  cout << "1"; 
-
-  while(! Q.empty() ) {
-    vertice v = Q.front();
-    Q.pop();
-
-    if( graph[from][v] > highest_weight ) {
-      highest_weight = graph[from][v];
-      edge[0] = from; edge[1] = v;
-    }
-
-    if( visited[v] ) {
-      //
-      // cycle
-      //
-      cout << " to " << v + 1 << " from " << from + 1;
-      cout << "\nfound cycle at " << v + 1 << endl;
-      graph[edge[0]][edge[1]] = 0;
-      graph[edge[1]][edge[0]] = 0;
-      highest_weight = 0;
-      cout << "edge = " << edge[0] + 1 << " to " << edge[1] + 1 << endl;
-      while(! Q.empty() ) Q.pop();
-      for( int i = 0; i < n; ++i ) visited[i] = false;
-      Q.push( start );
-      from = 0;
-    } else {
-      visited[v] = true;
-      cout << " to " << v + 1 << " from " << from + 1 << ", " << v + 1;
-      //
-      // move function
-      //
-      for( int i = 0; i < n; ++i ) {
-	if( i == from ) continue;
-	if( graph[v][i] > 0 ) {
-	  Q.push( i );
-	}
+  for( int i = 0; i <= (n/2); ++i ) {
+    for( int j = i; j < n; ++j ) {
+      if( graph[j][i] > 0 ) {
+	cout << "(" << i + 1 << ", " << j + 1 << ")" << endl;
       }
-
-      from = v;
     }
   }
-  cout << endl << endl;
+}
 
+void print_graph( int ** graph, int n ) {
   for( int i = 0; i < n; ++i ) {
     for( int j = 0; j < n; ++j ) {
       cout << graph[j][i] << " ";
     }
-    cout << endl;
+   cout << endl;
   }
 }
 
+//
+// return true if a cycle was found
+//
+bool depth_first_search( int curr, int from, int**& graph, bool*& visited, int& highest, int*& edge, int n ) {
+  if( visited[curr] ) {
+    return true;
+  }
+
+  //
+  // mark the vertice as visited
+  //
+  visited[curr] = true;
+  bool retVal = false;
+
+  for( int i = 0; i < n; ++i ) {
+    if( i == from ) {
+      continue;
+    } else if( graph[i][curr] > 0 ) {
+      if( graph[i][curr] > highest ) {
+	highest = graph[i][curr];
+	edge[0] = curr;
+	edge[1] = i;
+      }
+
+      //
+      // connected to vertice i, so explore that
+      //
+      retVal |= depth_first_search( i, curr, graph, visited, highest, edge, n );
+    }
+  }
+
+  return retVal;
+}
